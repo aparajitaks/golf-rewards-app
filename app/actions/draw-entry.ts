@@ -43,14 +43,12 @@ export async function enterDrawAction(drawId: string) {
   }
 
   const snapshot = scores.map((s) => s.points);
-  const { error } = await supabase.from("draw_entries").upsert(
-    {
-      draw_id: drawId,
-      user_id: user.id,
-      scores_snapshot: snapshot,
-    },
-    { onConflict: "draw_id,user_id" },
-  );
+  await supabase.from("draw_entries").delete().eq("draw_id", drawId).eq("user_id", user.id);
+  const { error } = await supabase.from("draw_entries").insert({
+    draw_id: drawId,
+    user_id: user.id,
+    scores_snapshot: snapshot,
+  });
 
   if (error) return { ok: false as const, error: error.message };
   revalidatePath("/dashboard");
