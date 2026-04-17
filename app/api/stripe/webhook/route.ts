@@ -93,6 +93,10 @@ async function upsertSubscription(
 ) {
   const priceId = sub.items.data[0]?.price?.id ?? null;
   const interval = sub.items.data[0]?.price?.recurring?.interval ?? null;
+  const billing = sub as unknown as {
+    current_period_start?: number | null;
+    current_period_end?: number | null;
+  };
   const row = {
     user_id: userId,
     stripe_customer_id: typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? null,
@@ -100,12 +104,12 @@ async function upsertSubscription(
     price_id: priceId,
     plan_interval: interval === "year" || interval === "month" ? interval : null,
     status: mapStripeStatus(sub.status),
-    current_period_start: sub.current_period_start
-      ? new Date(sub.current_period_start * 1000).toISOString()
-      : null,
-    current_period_end: sub.current_period_end
-      ? new Date(sub.current_period_end * 1000).toISOString()
-      : null,
+    current_period_start:
+      typeof billing.current_period_start === "number"
+        ? new Date(billing.current_period_start * 1000).toISOString()
+        : null,
+    current_period_end:
+      typeof billing.current_period_end === "number" ? new Date(billing.current_period_end * 1000).toISOString() : null,
     cancel_at_period_end: sub.cancel_at_period_end,
     metadata: sub.metadata as Record<string, string>,
   };
