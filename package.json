@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "dotenv -e .env.example -- next dev",
+    "dev": "dotenv -o -e .env.example -e .env.local -- next dev",
     "build": "next build",
-    "build:local": "dotenv -e .env.example -- next build",
-    "start": "dotenv -e .env.example -- next start",
+    "build:local": "dotenv -o -e .env.example -e .env.local -- next build",
+    "start": "dotenv -o -e .env.example -e .env.local -- next start",
     "lint": "eslint"
   },
   "dependencies": {

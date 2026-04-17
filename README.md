@@ -35,11 +35,19 @@ A membership product where golfers maintain **five Stableford scores**, join **m
 
 ---
 
-## Environment variables
+## Environment variables (local)
 
-Fill **`.env.example`** with your real keys locally (this repo loads it via `dotenv-cli` for `npm run dev` / `npm run start`). The committed file contains **placeholders only** — never commit secrets.
+**Recommended (safe):**
 
-On **Vercel**, set the same variable names in Project → Settings → Environment Variables (do not rely on `.env.example` in production builds).
+1. Keep **`.env.example`** in git as **placeholders only** (never commit real secrets here).
+2. Put **real API keys in `.env.local`** (gitignored). Optional starter: `cp env.local.template .env.local` then edit.
+3. Run **`npm run dev`** — `dotenv-cli` loads **`.env.example` first**, then **`.env.local`**, and later values override earlier ones (`-o` flag).
+
+**Do not** `git add` / commit `.env.local` or a `.env.example` that contains production secrets.
+
+If real keys were ever pushed to GitHub, **rotate** them in the Supabase and Stripe dashboards.
+
+On **Vercel**, set the same variable names under Project → Settings → Environment Variables. `npm run build` does **not** load these files (CI uses Vercel env only).
 
 Variable reference:
 
@@ -63,15 +71,13 @@ Public marketing pages **degrade gracefully** if Supabase env is missing (empty 
 
 ```bash
 npm install
-# Edit .env.example with your Supabase + Stripe values, then:
+cp env.local.template .env.local   # optional; then edit .env.local with real keys
 npm run dev
 ```
 
-Optional: keep a private **`.env.local`** for overrides — Next.js still merges it on top when present.
-
 1. **Supabase** → SQL Editor → run `supabase/schema.sql`, then `supabase/seed.sql` (three charities).  
 2. **Storage** → create bucket `winner-proofs` (see schema README notes in repo history or Storage policies in Supabase docs).  
-3. **Stripe** → products/prices → paste price IDs into `.env.example` (local) or Vercel env. Configure **Customer portal**.  
+3. **Stripe** → products/prices → put price IDs and keys in **`.env.local`** (local) or in Vercel env. Configure **Customer portal**.  
 4. **Auth URLs** in Supabase → add `http://localhost:3000/auth/callback` and production callback + `/reset-password`.  
 5. Run:
 
