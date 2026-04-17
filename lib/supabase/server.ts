@@ -27,3 +27,11 @@ export async function createServerSupabase(): Promise<SupabaseClient> {
     },
   }) as SupabaseClient;
 }
+
+/** Returns null if env is missing — use for marketing pages so builds/previews do not hard-crash. */
+export async function createServerSupabaseOrNull(): Promise<SupabaseClient | null> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return null;
+  }
+  return createServerSupabase();
+}

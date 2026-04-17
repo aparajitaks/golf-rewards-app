@@ -1,26 +1,20 @@
 import Link from "next/link";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { Suspense } from "react";
 import {
   FaqSection,
-  FeaturedCharitiesSection,
   FinalCtaSection,
   HeroSection,
   HowItWorksSection,
   PrizePoolSection,
   TestimonialsSection,
 } from "@/components/marketing/home-motion";
+import { FeaturedCharitiesAsync } from "@/components/marketing/featured-charities-async";
+import { FeaturedCharitiesSkeleton } from "@/components/marketing/featured-charities-skeleton";
 import { Button } from "@/components/ui/button";
 
 export const revalidate = 120;
 
 export default async function HomePage() {
-  const supabase = await createServerSupabase();
-  const { data: featured } = await supabase
-    .from("charities")
-    .select("id, name, slug, short_description")
-    .eq("featured", true)
-    .limit(4);
-
   return (
     <>
       <HeroSection />
@@ -39,7 +33,9 @@ export default async function HomePage() {
           </Button>
         </div>
       </section>
-      <FeaturedCharitiesSection charities={featured ?? []} />
+      <Suspense fallback={<FeaturedCharitiesSkeleton />}>
+        <FeaturedCharitiesAsync />
+      </Suspense>
       <section className="mx-auto max-w-6xl px-4 pb-8 sm:px-6">
         <div className="rounded-2xl border border-dashed border-border/80 bg-muted/30 px-6 py-10 text-center">
           <p className="text-sm font-medium text-muted-foreground">Pricing</p>

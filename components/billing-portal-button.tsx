@@ -4,10 +4,11 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
-export function BillingPortalButton() {
+export function BillingPortalButton({ disabled }: { disabled?: boolean }) {
   const [loading, setLoading] = useState(false);
 
   async function open() {
+    if (disabled) return;
     setLoading(true);
     try {
       const res = await fetch("/api/stripe/portal", { method: "POST" });
@@ -22,7 +23,7 @@ export function BillingPortalButton() {
   }
 
   return (
-    <Button type="button" variant="outline" disabled={loading} onClick={() => void open()}>
+    <Button type="button" variant="outline" disabled={loading || disabled} title={disabled ? "Complete checkout first" : undefined} onClick={() => void open()}>
       {loading ? "Opening…" : "Open billing portal"}
     </Button>
   );

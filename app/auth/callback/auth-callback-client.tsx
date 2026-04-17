@@ -18,18 +18,18 @@ export function AuthCallbackClient() {
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) {
-            console.warn("exchangeCodeForSession", error);
+            if (process.env.NODE_ENV === "development") console.warn("exchangeCodeForSession", error);
             setMessage(error.message);
             router.replace("/login");
             return;
           }
         }
         const { data, error } = await supabase.auth.getUser();
-        if (error) console.warn("getUser error after callback", error);
+        if (error && process.env.NODE_ENV === "development") console.warn("getUser after callback", error);
         if (data?.user) router.replace(next);
         else router.replace("/login");
       } catch (err) {
-        console.error(err);
+        if (process.env.NODE_ENV === "development") console.error(err);
         router.replace("/login");
       }
     })();

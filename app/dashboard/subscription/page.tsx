@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 export default async function SubscriptionPage() {
   const { user } = await requireUser();
   const supabase = await createServerSupabase();
+  const { data: profile } = await supabase.from("profiles").select("stripe_customer_id").eq("id", user.id).maybeSingle();
   const { data: sub } = await supabase
     .from("subscriptions")
     .select("*")
@@ -39,6 +40,11 @@ export default async function SubscriptionPage() {
               Plan interval: <span className="font-medium capitalize">{sub.plan_interval}</span>
             </p>
           )}
+          {!profile?.stripe_customer_id && (
+            <p className="text-xs text-muted-foreground">
+              Complete a checkout once to enable the billing portal (Stripe customer is created on first purchase).
+            </p>
+          )}
           {sub?.current_period_end && (
             <p className="text-muted-foreground">
               Current period ends{" "}
@@ -48,7 +54,7 @@ export default async function SubscriptionPage() {
             </p>
           )}
           <div className="flex flex-wrap gap-3">
-            <BillingPortalButton />
+            <BillingPortalButton disabled={!profile?.stripe_customer_id} />
             <Button asChild variant="secondary">
               <Link href="/pricing">Change plan</Link>
             </Button>
