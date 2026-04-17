@@ -20,7 +20,7 @@ export default async function AdminDrawsPage() {
               <div>
                 <CardTitle className="font-heading text-lg">{d.title}</CardTitle>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {d.period_month} · {d.mode} · pool £{(d.pool_cents / 100).toFixed(0)}
+                  {d.period_month} · {d.mode} · pool £{((d.pool_cents ?? 0) / 100).toFixed(0)}
                 </p>
               </div>
               <Badge variant="outline" className="capitalize">

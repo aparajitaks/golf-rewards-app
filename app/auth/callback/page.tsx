@@ -1,42 +1,44 @@
 "use client";
-import React, { useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { getBrowserSupabase } from '@/lib/supabase';
+
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { getBrowserSupabase } from "@/lib/supabase";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params?.get('next') ?? '/dashboard';
-  const [message, setMessage] = useState('Completing sign in...');
+  const next = params?.get("next") ?? "/dashboard";
+  const code = params?.get("code");
+  const [message, setMessage] = useState("Completing sign in…");
 
   useEffect(() => {
     (async () => {
       try {
         const supabase = getBrowserSupabase();
-        // After OAuth redirect Supabase should set the session cookie.
-        // Call getUser() which verifies the session with Supabase Auth.
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) {
+            console.warn("exchangeCodeForSession", error);
+            setMessage(error.message);
+            router.replace("/login");
+            return;
+          }
+        }
         const { data, error } = await supabase.auth.getUser();
-        if (error) {
-          console.warn('getUser error after callback', error);
-        }
-
-        // If a user exists we can safely redirect to next; otherwise go to login.
-        if (data?.user) {
-          router.replace(next);
-        } else {
-          router.replace('/login');
-        }
+        if (error) console.warn("getUser error after callback", error);
+        if (data?.user) router.replace(next);
+        else router.replace("/login");
       } catch (err) {
         console.error(err);
-        router.replace('/login');
+        router.replace("/login");
       }
     })();
-  }, [router, next]);
+  }, [router, next, code]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="bg-white p-6 rounded shadow">
-        <p>{message}</p>
+    <div className="flex min-h-[40vh] items-center justify-center px-4">
+      <div className="rounded-xl border border-border/70 bg-card/80 px-6 py-8 text-center text-sm text-muted-foreground shadow-sm">
+        {message}
       </div>
     </div>
   );

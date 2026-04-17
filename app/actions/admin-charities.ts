@@ -28,7 +28,7 @@ const charitySchema = z.object({
 export async function upsertCharityAction(input: unknown) {
   await requireAdmin();
   const parsed = charitySchema.safeParse(input);
-  if (!parsed.success) return { ok: false as const, error: parsed.error.flatten().fieldErrors };
+  if (!parsed.success) return { ok: false as const, error: "Invalid charity form" };
   const supabase = await createServerSupabase();
   const { id, tags, ...rest } = parsed.data;
   const row = {
