@@ -37,7 +37,11 @@ A membership product where golfers maintain **five Stableford scores**, join **m
 
 ## Environment variables
 
-Copy `.env.example` → `.env.local` and fill:
+Fill **`.env.example`** with your real keys locally (this repo loads it via `dotenv-cli` for `npm run dev` / `npm run start`). The committed file contains **placeholders only** — never commit secrets.
+
+On **Vercel**, set the same variable names in Project → Settings → Environment Variables (do not rely on `.env.example` in production builds).
+
+Variable reference:
 
 | Variable | Required | Purpose |
 | -------- | -------- | ------- |
@@ -59,13 +63,15 @@ Public marketing pages **degrade gracefully** if Supabase env is missing (empty 
 
 ```bash
 npm install
-cp .env.example .env.local
-# Fill env vars above
+# Edit .env.example with your Supabase + Stripe values, then:
+npm run dev
 ```
+
+Optional: keep a private **`.env.local`** for overrides — Next.js still merges it on top when present.
 
 1. **Supabase** → SQL Editor → run `supabase/schema.sql`, then `supabase/seed.sql` (three charities).  
 2. **Storage** → create bucket `winner-proofs` (see schema README notes in repo history or Storage policies in Supabase docs).  
-3. **Stripe** → products/prices → paste price IDs into `.env.local`. Configure **Customer portal**.  
+3. **Stripe** → products/prices → paste price IDs into `.env.example` (local) or Vercel env. Configure **Customer portal**.  
 4. **Auth URLs** in Supabase → add `http://localhost:3000/auth/callback` and production callback + `/reset-password`.  
 5. Run:
 

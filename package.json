@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "dotenv -e .env.example -- next dev",
     "build": "next build",
-    "start": "next start",
+    "build:local": "dotenv -e .env.example -- next build",
+    "start": "dotenv -e .env.example -- next start",
     "lint": "eslint"
   },
   "dependencies": {
@@ -30,6 +31,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "dotenv-cli": "^8.0.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
