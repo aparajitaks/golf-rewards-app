@@ -1,23 +1,41 @@
 "use client";
-import React, { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { getBrowserSupabase } from '@/lib/supabase';
+
+import React, { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { getBrowserSupabase } from "@/lib/supabase";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
 
-  // The reset link usually includes an access token in the URL which supabase will exchange
-  // and store in the cookie automatically on redirect. We only need to call updateUser.
   useEffect(() => {
-    // If there's an error param in the URL, show it.
-    const err = params?.get('error_description') || params?.get('error');
+    const err = params?.get("error_description") || params?.get("error");
     if (err) setError(err);
+  }, [params]);
+
+  useEffect(() => {
+    (async () => {
+      const code = params?.get("code");
+      if (!code) {
+        setSessionReady(true);
+        return;
+      }
+      const supabase = getBrowserSupabase();
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (error) setError(error.message);
+      setSessionReady(true);
+    })();
   }, [params]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -27,57 +45,63 @@ export default function ResetPasswordPage() {
     setMessage(null);
 
     if (!password) {
-      setError('Please enter a new password.');
+      setError("Please enter a new password.");
       setLoading(false);
       return;
     }
     if (password !== confirm) {
-      setError('Passwords do not match.');
+      setError("Passwords do not match.");
       setLoading(false);
       return;
     }
 
     try {
       const supabase = getBrowserSupabase();
-      // updateUser will set the new password for the currently authenticated user
-      const { data, error } = await supabase.auth.updateUser({ password });
+      const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
-
-      setMessage('Password updated — you can now sign in with your new password. Redirecting to login...');
-      setTimeout(() => router.replace('/login'), 1400);
-    } catch (err: any) {
-      setError(err.message ?? String(err));
+      setMessage("Password updated. Redirecting to login…");
+      setTimeout(() => router.replace("/login"), 1200);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="w-full max-w-md bg-white rounded-lg shadow p-8">
-        <h1 className="text-2xl font-semibold mb-4">Choose a new password</h1>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700">New password</label>
-            <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required className="mt-1 block w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-sky-500 p-2" />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700">Confirm password</label>
-            <input value={confirm} onChange={(e) => setConfirm(e.target.value)} type="password" required className="mt-1 block w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-sky-500 p-2" />
-          </div>
-
-          {error && <div className="text-sm text-red-600">{error}</div>}
-          {message && <div className="text-sm text-emerald-600">{message}</div>}
-
-          <div>
-            <button className="inline-flex items-center px-4 py-2 bg-sky-600 text-white rounded hover:bg-sky-700" disabled={loading}>
-              {loading ? 'Updating...' : 'Set new password'}
-            </button>
-          </div>
-        </form>
-      </div>
+    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center px-4 py-12">
+      <Card className="w-full max-w-md border-border/80 shadow-xl">
+        <CardHeader>
+          <CardTitle className="font-heading text-2xl">New password</CardTitle>
+          <CardDescription>Choose a strong password you have not used elsewhere.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!sessionReady ? (
+            <p className="text-sm text-muted-foreground">Preparing secure session…</p>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="password">New password</Label>
+                <Input id="password" value={password} onChange={(e) => setPassword(e.target.value)} type="password" required autoComplete="new-password" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm">Confirm</Label>
+                <Input id="confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} type="password" required autoComplete="new-password" />
+              </div>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              {message && <p className="text-sm text-emerald-600 dark:text-emerald-400">{message}</p>}
+              <Button type="submit" disabled={loading}>
+                {loading ? "Updating…" : "Set password"}
+              </Button>
+            </form>
+          )}
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            <Link href="/login" className="hover:text-foreground">
+              ← Back to login
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
