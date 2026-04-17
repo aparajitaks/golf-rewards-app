@@ -18,7 +18,8 @@ export function HeroSection() {
   return (
     <section className="relative overflow-hidden border-b border-border/60">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(139,92,246,0.28),transparent)] dark:bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(167,139,250,0.18),transparent)]" />
-      <div className="relative mx-auto max-w-6xl px-4 pb-24 pt-16 sm:px-6 sm:pt-24 lg:pt-28">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background to-transparent" />
+      <div className="relative mx-auto max-w-6xl px-4 pb-28 pt-20 sm:px-6 sm:pb-32 sm:pt-28 lg:pt-32">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -40,13 +41,17 @@ export function HeroSection() {
             Subscribe, log your last five Stableford rounds, and join a monthly draw engineered for fairness — while
             directing at least 10% to a charity you believe in.
           </p>
-          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Button size="lg" asChild className="min-w-[200px] gap-2 shadow-lg shadow-violet-500/20">
+          <div className="mt-12 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:justify-center">
+            <Button
+              size="lg"
+              asChild
+              className="min-h-11 min-w-[200px] gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/25 hover:from-violet-500 hover:to-fuchsia-500 sm:min-w-[220px]"
+            >
               <Link href="/signup">
                 Start membership <ArrowRight className="size-4" />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild>
+            <Button size="lg" variant="outline" asChild className="min-h-11 border-border/80 bg-background/60 backdrop-blur">
               <Link href="/concept">See how it works</Link>
             </Button>
           </div>

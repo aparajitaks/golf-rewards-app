@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerSupabaseOrNull } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -10,7 +10,8 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const supabase = await createServerSupabase();
+  const supabase = await createServerSupabaseOrNull();
+  if (!supabase) return { title: "Charity" };
   const { data } = await supabase.from("charities").select("name, short_description").eq("slug", slug).maybeSingle();
   if (!data) return { title: "Charity" };
   return { title: data.name, description: data.short_description ?? undefined };
@@ -18,7 +19,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CharityProfilePage({ params }: Props) {
   const { slug } = await params;
-  const supabase = await createServerSupabase();
+  const supabase = await createServerSupabaseOrNull();
+  if (!supabase) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16 text-center">
+        <p className="text-muted-foreground">Supabase is not configured.</p>
+      </div>
+    );
+  }
   const { data: c } = await supabase.from("charities").select("*").eq("slug", slug).maybeSingle();
   if (!c) notFound();
 

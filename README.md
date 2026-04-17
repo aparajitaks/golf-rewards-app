@@ -1,123 +1,156 @@
 # Golf Rewards Charity Platform
 
-Startup-grade **Next.js 16 (App Router)**, **TypeScript**, **Tailwind CSS 4**, **shadcn-style UI**, **Supabase** (Auth + Postgres + Storage), **Stripe** subscriptions, **React Hook Form + Zod**, **Framer Motion**, and **Vercel-ready** deployment.
+Submission-ready **Next.js 16 (App Router)** + **TypeScript** + **Tailwind CSS 4** + **Supabase** (Auth, Postgres, Storage) + **Stripe** (subscriptions, portal, webhooks) + **Framer Motion** + **React Hook Form / Zod**.
 
-## 1. Project folder structure (high level)
+**Live deployment:** `https://YOUR-VERCEL-URL.vercel.app` (replace after deploy)
 
-```
-app/
-  page.tsx                 # Premium marketing homepage
-  concept/                 # How it works
-  charities/               # Directory + profile pages
-  pricing/, checkout/
-  login/, signup/, forgot-password/, reset-password/
-  auth/callback/           # OAuth + PKCE code exchange
-  dashboard/               # Subscriber shell + modules
-  admin/                     # Admin portal (role-gated)
-  api/stripe/                # Checkout, portal, webhooks
-components/
-  marketing/, dashboard/, admin/, ui/
-lib/
-  supabase/ (server, middleware, service), stripe, draw-engine, email, …
-app/actions/               # Server Actions (scores, draws, profile, admin)
-supabase/
-  schema.sql                 # Tables, triggers, RLS
-  seed.sql                   # Sample charities
-```
+---
 
-## 2. Database schema
+## Project overview
 
-Run `supabase/schema.sql` in the Supabase SQL editor (or your migration workflow). It provisions:
+A membership product where golfers maintain **five Stableford scores**, join **monthly draws**, and direct **charity contributions**. Includes a **member dashboard**, **admin portal** (draws, winners, charities, reports), and a **conversion-focused marketing site**.
 
-`profiles`, `subscriptions`, `scores`, `charities`, `draws`, `draw_entries`, `draw_results`, `winners`, `payments`, `notifications`, `admin_logs`
+---
 
-— with foreign keys, indexes, an `auth.users` → `profiles` trigger, RLS policies, and a **before insert** guard for **max five scores per user**.
+## Tech stack
 
-Optional seed: `supabase/seed.sql`.
+| Area        | Choice |
+| ----------- | ------ |
+| Framework   | Next.js 16 App Router |
+| UI          | Tailwind 4, shadcn-style components, next-themes, sonner |
+| Data / Auth | Supabase (RLS in `supabase/schema.sql`) |
+| Payments    | Stripe Checkout + Customer Portal + webhooks |
+| Forms       | React Hook Form + Zod |
 
-### Storage (winner proofs)
+---
 
-1. Create a **public** or **authenticated** bucket named `winner-proofs` in Supabase Storage.
-2. Add policies so members can upload to `winner-proofs/{user_id}/...` and admins can read all objects (tighten paths in production).
+## Features completed (demo scope)
 
-## 3. Setup commands
+- [x] Marketing homepage, pricing, concept, charity directory + profile pages  
+- [x] Email/password auth, Google OAuth hook, forgot/reset password, PKCE callback  
+- [x] Subscriber dashboard: overview, scores CRUD (premium-gated), draws, winnings (proof upload), charity settings, subscription  
+- [x] Admin: users search, scores list, draws simulate/publish, charities CRUD, winner verification, reports  
+- [x] Stripe checkout + billing portal API routes + subscription sync webhook (service role)  
+- [x] Row Level Security + server actions for sensitive writes  
+
+---
+
+## Environment variables
+
+Copy `.env.example` → `.env.local` and fill:
+
+| Variable | Required | Purpose |
+| -------- | -------- | ------- |
+| `NEXT_PUBLIC_SITE_URL` | Yes | Canonical site URL (auth redirects, Stripe return URLs) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon key (browser + server) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes (prod) | **Server only** — Stripe webhook upserts subscriptions |
+| `STRIPE_SECRET_KEY` | Yes | Stripe secret |
+| `STRIPE_WEBHOOK_SECRET` | Yes (prod) | Webhook signing secret |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Optional | If you add client-side Stripe.js later |
+| `STRIPE_PRICE_MONTHLY` | Yes | Recurring price id for monthly plan |
+| `STRIPE_PRICE_YEARLY` | Yes | Recurring price id for yearly plan |
+
+Public marketing pages **degrade gracefully** if Supabase env is missing (empty charity sections / copy instead of a crash).
+
+---
+
+## Setup (local / judge machine)
 
 ```bash
 npm install
 cp .env.example .env.local
-# Fill NEXT_PUBLIC_SUPABASE_* , STRIPE_* , SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SITE_URL
+# Fill env vars above
 ```
 
-Apply SQL, then seed charities:
-
-```bash
-# In Supabase SQL editor: paste supabase/schema.sql, then optionally supabase/seed.sql
-```
-
-Promote your user to admin (replace email):
-
-```sql
-update public.profiles set role = 'admin' where email = 'you@company.com';
-```
-
-Run the app:
+1. **Supabase** → SQL Editor → run `supabase/schema.sql`, then `supabase/seed.sql` (three charities).  
+2. **Storage** → create bucket `winner-proofs` (see schema README notes in repo history or Storage policies in Supabase docs).  
+3. **Stripe** → products/prices → paste price IDs into `.env.local`. Configure **Customer portal**.  
+4. **Auth URLs** in Supabase → add `http://localhost:3000/auth/callback` and production callback + `/reset-password`.  
+5. Run:
 
 ```bash
 npm run dev
 ```
 
-## 4. Core implementation notes
-
-- **Auth**: `@supabase/ssr` browser client + `middleware.ts` session refresh (`getAll` / `setAll` cookies). Server data uses `lib/supabase/server.ts`.
-- **Roles**: `profiles.role` (`user` | `admin`). Middleware blocks `/admin` for non-admins; layouts call `requireAdmin()` again.
-- **Subscriptions**: `lib/subscription.ts` treats `active` and `trialing` with a future `current_period_end` as premium. Webhook (`app/api/stripe/webhook/route.ts`) upserts `subscriptions` using the **service role** client (`lib/supabase/service.ts`).
-- **Scores**: Server actions trim to five rounds, enforce Stableford **1–45**, unique dates, and premium gating (`app/actions/scores.ts`).
-- **Draws**: `lib/draw-engine.ts` implements multiset matching, **random** vs **weighted** winning lines, and **40% / 35% / 25%** tier splits with jackpot carry for unallocated headline pools. Admin simulate + publish in `app/actions/draw-admin.ts`.
-- **Charity**: Public directory with search/tags; signup and dashboard charity settings.
-- **Email**: `lib/email.ts` is a **placeholder** (`sendEmail`) — swap for Resend/Postmark/SendGrid.
-- **Rate limits**: `lib/rate-limit.ts` in-memory placeholder for sensitive actions.
-
-## 5. Stripe
-
-1. Create **Products** and recurring **Prices** (monthly + yearly).
-2. Put price IDs in `.env.local` as `STRIPE_PRICE_MONTHLY` and `STRIPE_PRICE_YEARLY`.
-3. Configure the **customer portal** in Stripe Dashboard.
-4. Checkout session metadata includes `supabase_user_id`; subscription metadata is set for webhook upserts.
-
-### Webhook guide
-
-1. Stripe Dashboard → Developers → Webhooks → Add endpoint:  
-   `https://<your-domain>/api/stripe/webhook`
-2. Events (minimum): `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`.
-3. Signing secret → `STRIPE_WEBHOOK_SECRET`.
-4. Use the **live** secret in production; service role key only on the server.
-
-Local testing:
+Quality gates:
 
 ```bash
-stripe listen --forward-to localhost:3000/api/stripe/webhook
+npm run build
+npm run lint
 ```
-
-## 6. Vercel deployment
-
-1. Connect the Git repo to Vercel; framework preset **Next.js**.
-2. Set the same environment variables as `.env.example` in the Vercel project settings.
-3. Add your production URL to **Supabase Auth → URL configuration** (redirect URLs include `/auth/callback`, `/reset-password`).
-4. Deploy. Run SQL migrations against the production Supabase project before sending traffic.
-
-## 7. Next.js 16 note (middleware → proxy)
-
-Builds may log: *middleware file convention is deprecated — use proxy*. Follow the official Next.js 16 migration guide when you are ready to move session refresh + route guards from `middleware.ts` to the new `proxy` convention.
-
-## 8. Scripts
-
-| Command        | Purpose              |
-| -------------- | -------------------- |
-| `npm run dev`  | Local development    |
-| `npm run build`| Production build     |
-| `npm run start`| Start production app |
-| `npm run lint` | ESLint               |
 
 ---
 
-Built as a **single product codebase** — extend admin CRUD, wire real email, add analytics, and tighten Storage RLS as you harden for launch.
+## Demo credentials & seed data
+
+### Accounts (create in the app or Supabase Auth)
+
+Use these **exact emails** so `supabase/demo-seed.sql` can attach data:
+
+| Role   | Email                    | Password               |
+| ------ | ------------------------ | ---------------------- |
+| Member | `member@golfrewards.demo` | `SubmissionDemo2026!` |
+| Admin  | `admin@golfrewards.demo`  | `SubmissionDemo2026!` |
+
+After both exist, in **SQL Editor**:
+
+```sql
+update public.profiles set role = 'admin' where email = 'admin@golfrewards.demo';
+```
+
+Then run **`supabase/demo-seed.sql`** (same editor). It will:
+
+- Promote `admin@…` to admin  
+- Attach member to Fairway Futures charity  
+- Insert **five realistic Stableford scores**  
+- Create a **published “Judge Demo Draw”** with a **5-match win**, `draw_results`, `winners`, and a **notification** for the member  
+
+**Admin walkthrough:** log in as admin → `/admin` → Users, Draws, Winners, Reports.  
+**Member walkthrough:** log in as member → Dashboard → Scores / Draws / Winnings (proof upload).
+
+---
+
+## Stripe webhook (production)
+
+Endpoint: `https://YOUR-DOMAIN/api/stripe/webhook`  
+
+Events (minimum): `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`.
+
+Use `stripe listen --forward-to localhost:3000/api/stripe/webhook` locally.
+
+---
+
+## Deployment (Vercel)
+
+1. Import repo → set **all** env vars (including `SUPABASE_SERVICE_ROLE_KEY`).  
+2. Production **Supabase Auth** URL allowlist must include your Vercel domain + `/auth/callback`.  
+3. Deploy → run SQL migrations on the **production** Supabase project before sharing the link.
+
+**Note:** Next.js 16 may log that `middleware` is deprecated in favour of `proxy` — session refresh still works; migrate when you have time ([docs](https://nextjs.org/docs/messages/middleware-to-proxy)).
+
+---
+
+## Repo map
+
+- `app/` — routes (marketing, `dashboard/*`, `admin/*`, `api/stripe/*`)  
+- `app/actions/` — server actions (scores, draws, profile, admin)  
+- `lib/` — Supabase factories, Stripe, draw engine, email placeholder  
+- `supabase/schema.sql` — DDL + RLS  
+- `supabase/seed.sql` — three charities  
+- `supabase/demo-seed.sql` — judge-ready member scores + winning draw  
+
+---
+
+## Submission checklist (quick)
+
+- [ ] `npm run build` / `npm run lint` green  
+- [ ] Vercel env vars set (incl. service role + webhook secret)  
+- [ ] Supabase Auth redirect URLs updated for prod domain  
+- [ ] `schema.sql` + `seed.sql` + `demo-seed.sql` applied on prod DB  
+- [ ] Stripe webhook live + test subscription once  
+- [ ] Replace deployment placeholder URL at top of this README  
+
+---
+
+Built for evaluation: prioritize **stability**, **clear demo path**, and **documented setup** over speculative refactors.

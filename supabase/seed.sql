@@ -1,5 +1,4 @@
--- Optional seed data for local / staging (charities + sample draws)
-
+-- Three featured charities for demos / judging (idempotent)
 insert into public.charities (name, slug, short_description, description, mission, website_url, country, tags, featured, events)
 values
 (
@@ -35,22 +34,7 @@ values
   'https://example.org/quiet-mind',
   'UK',
   array['mental health', 'wellbeing'],
-  false,
-  '[]'::jsonb
-),
-(
-  'Par for Purpose',
-  'par-for-purpose',
-  'Micro-grants for adaptive golf programmes.',
-  'Par for Purpose funds clinics and equipment for players with disabilities, working with clubs nationwide.',
-  'Inclusion is the ultimate handicap system.',
-  'https://example.org/par-for-purpose',
-  'UK',
-  array['inclusion', 'accessibility'],
-  false,
+  true,
   '[]'::jsonb
 )
 on conflict (slug) do nothing;
-
--- Promote first user to admin (replace email after signup):
--- update public.profiles set role = 'admin' where email = 'you@company.com';

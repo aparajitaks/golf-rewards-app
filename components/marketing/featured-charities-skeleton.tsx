@@ -15,7 +15,7 @@ export function FeaturedCharitiesSkeleton() {
         {[1, 2, 3].map((i) => (
           <Card key={i} className="border-border/60">
             <CardContent className="space-y-3 p-6">
-              <Skeleton className="h-5 w-3/4" />
+              <Skeleton className="h-5 w-[85%]" />
               <Skeleton className="h-16 w-full" />
               <Skeleton className="h-4 w-24" />
             </CardContent>

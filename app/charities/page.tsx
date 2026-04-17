@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServerSupabaseOrNull } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,15 @@ export default async function CharitiesPage({
   const q = (sp.q ?? "").trim();
   const tag = (sp.tag ?? "").trim();
 
-  const supabase = await createServerSupabase();
+  const supabase = await createServerSupabaseOrNull();
+  if (!supabase) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-16 text-center sm:px-6">
+        <h1 className="font-heading text-2xl font-bold">Charity directory</h1>
+        <p className="mt-4 text-muted-foreground">Connect Supabase in environment variables to load charities.</p>
+      </div>
+    );
+  }
   let query = supabase.from("charities").select("id, name, slug, short_description, tags, featured").order("featured", { ascending: false });
   if (q) {
     query = query.or(`name.ilike.%${q}%,short_description.ilike.%${q}%`);
