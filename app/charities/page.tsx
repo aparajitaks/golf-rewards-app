@@ -30,7 +30,9 @@ export default async function CharitiesPage({
   }
   const { data: rows } = await query;
 
-  const tags = Array.from(new Set((rows ?? []).flatMap((r) => r.tags ?? []))).slice(0, 12);
+  const tags = Array.from(
+    new Set((rows ?? []).flatMap((r) => (Array.isArray(r.tags) ? (r.tags as string[]) : []))),
+  ).slice(0, 12) as string[];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -72,7 +74,7 @@ export default async function CharitiesPage({
                 </div>
                 <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{c.short_description}</p>
                 <div className="mt-3 flex flex-wrap gap-1">
-                  {(c.tags ?? []).slice(0, 4).map((t) => (
+                  {((c.tags ?? []) as string[]).slice(0, 4).map((t: string) => (
                     <Badge key={t} variant="outline" className="text-[10px]">
                       {t}
                     </Badge>
