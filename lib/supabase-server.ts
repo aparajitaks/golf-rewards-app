@@ -2,9 +2,11 @@
 // Server-side Supabase client factory for Next.js App Router.
 // Use in server components or route handlers to access data scoped to the current user session.
 //
-// Example:
-//   const supabase = getServerSupabase();
-//   const { data: session } = await supabase.auth.getSession();
+// Example (server-safe):
+//   const supabase = await getServerSupabase();
+//   // To verify the authenticated user on the server call getUser()
+//   const { data } = await supabase.auth.getUser();
+//   const user = data?.user;
 
 import { cookies } from 'next/headers';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -57,9 +59,9 @@ export async function getServerSupabase(): Promise<SupabaseClient> {
   const cookieMethods = {
     // Return array of { name, value }
     getAll: () => normalized,
-    // setAll is intentionally omitted. If your application needs to write auth cookies
-    // server-side (token refresh), implement setAll in middleware and pass a full
-    // adapter there.
+    // setAll is intentionally omitted here. If your application needs to write auth cookies
+    // server-side (for token refresh), implement cookie setAll in a proxy/middleware layer
+    // and pass a full adapter that implements setAll.
   } as const;
 
   const supabase = createServerClient(supabaseUrl, anonKey, {

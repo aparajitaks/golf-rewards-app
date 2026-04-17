@@ -32,9 +32,17 @@ export default function LoginPage() {
     setError(null);
     try {
       const supabase = getBrowserSupabase();
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      // onAuthStateChange will redirect
+
+      // If sign in succeeded and session is returned, redirect immediately.
+      const session = (data as any)?.session ?? null;
+      if (session && session.access_token) {
+        router.replace(next);
+        return;
+      }
+
+      // Otherwise wait for onAuthStateChange as a fallback (e.g. OAuth flows)
     } catch (err: any) {
       setError(err.message ?? String(err));
     } finally {

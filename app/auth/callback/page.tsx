@@ -13,14 +13,19 @@ export default function AuthCallbackPage() {
     (async () => {
       try {
         const supabase = getBrowserSupabase();
-        // Try to get session — Supabase client should have set cookies on redirect
-        const { data, error } = await supabase.auth.getSession();
+        // After OAuth redirect Supabase should set the session cookie.
+        // Call getUser() which verifies the session with Supabase Auth.
+        const { data, error } = await supabase.auth.getUser();
         if (error) {
-          // Not fatal — continue to next
-          console.warn('getSession error', error);
+          console.warn('getUser error after callback', error);
         }
-        // Redirect to next destination
-        router.replace(next);
+
+        // If a user exists we can safely redirect to next; otherwise go to login.
+        if (data?.user) {
+          router.replace(next);
+        } else {
+          router.replace('/login');
+        }
       } catch (err) {
         console.error(err);
         router.replace('/login');

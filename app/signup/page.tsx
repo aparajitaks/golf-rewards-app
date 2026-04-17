@@ -24,11 +24,17 @@ export default function SignupPage() {
       const supabase = getBrowserSupabase();
       const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName } } });
       if (error) throw error;
-      // Successful signup: Supabase may require email confirmation depending on settings
-      setMessage('Signup successful. Check your email to confirm (if required). Redirecting...');
-      setTimeout(() => {
-        router.push(next);
-      }, 1200);
+
+      // If Supabase returns a session the user is signed in immediately.
+      const session = (data as any)?.session ?? null;
+      if (session && session.access_token) {
+        // Signed in — redirect to intended destination
+        router.replace(next);
+        return;
+      }
+
+      // No session — likely email confirmation is required. Show success message and don't auto-create again.
+      setMessage('Signup successful. Check your email to confirm your account (if required).');
     } catch (err: any) {
       setError(err.message ?? String(err));
     } finally {
