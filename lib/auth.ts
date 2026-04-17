@@ -5,7 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getServerSupabase } from './supabase-server';
 
 export async function requireUser() {
-  const supabase = getServerSupabase() as SupabaseClient;
+  const supabase = (await getServerSupabase()) as SupabaseClient;
 
   const {
     data: { session },
@@ -34,7 +34,7 @@ export async function requireUser() {
 }
 
 export async function getCurrentUser() {
-  const supabase = getServerSupabase() as SupabaseClient;
+  const supabase = (await getServerSupabase()) as SupabaseClient;
   const {
     data: { session },
   } = await supabase.auth.getSession();

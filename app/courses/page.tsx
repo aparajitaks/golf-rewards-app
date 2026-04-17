@@ -4,7 +4,7 @@ import CoursesList from '@/components/courses/CoursesList';
 import type { Course } from '@/components/courses/CourseCard';
 
 export default async function CoursesPage() {
-  const supabase = getServerSupabase();
+  const supabase = await getServerSupabase();
 
   const { data, error } = await supabase
     .from('golf_courses')

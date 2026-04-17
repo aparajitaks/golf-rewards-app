@@ -10,7 +10,7 @@ import { cookies } from 'next/headers';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 
-export function getServerSupabase(): SupabaseClient {
+export async function getServerSupabase(): Promise<SupabaseClient> {
   // This function must only be called from server-side context (Server Component, Route Handler)
   if (typeof window !== 'undefined') {
     throw new Error('getServerSupabase must be called from the server.');
@@ -28,22 +28,35 @@ export function getServerSupabase(): SupabaseClient {
   // that reads Next's request cookies. setAll is intentionally omitted here —
   // if your app needs to write auth cookies server-side (token refresh) you should implement
   // middleware that handles setAll and pass a full cookie adapter.
-  // cookies() can be environment/version-dependent; cast to any for a flexible adapter.
+  // cookies() can be environment/version-dependent and in some Next versions returns a Promise.
+  // Detect both sync and async shapes and normalize into a sync array for the adapter.
   const cookieStoreAny: any = cookies();
+
+  // If cookies() returned a Promise (some environments), await it.
+  const maybeCookieStore = typeof cookieStoreAny?.then === 'function' ? await cookieStoreAny : cookieStoreAny;
+
+  // Build a synchronous array of cookie objects { name, value }
+  let normalized: Array<{ name: string; value: string }> = [];
+  try {
+    if (maybeCookieStore) {
+      // If there's a getAll function, it might return a Promise or an array.
+      if (typeof maybeCookieStore.getAll === 'function') {
+        const res = maybeCookieStore.getAll();
+        const all = typeof res?.then === 'function' ? await res : res;
+        if (Array.isArray(all)) {
+          normalized = all.map((c: any) => ({ name: String(c.name), value: String(c.value) }));
+        }
+      } else if (Array.isArray(maybeCookieStore)) {
+        normalized = maybeCookieStore.map((c: any) => ({ name: String(c.name), value: String(c.value) }));
+      }
+    }
+  } catch (err) {
+    normalized = [];
+  }
 
   const cookieMethods = {
     // Return array of { name, value }
-    getAll: () => {
-      try {
-        const all = typeof cookieStoreAny.getAll === 'function' ? cookieStoreAny.getAll() : cookieStoreAny;
-        if (!all) return [] as { name: string; value: string }[];
-        return Array.isArray(all)
-          ? all.map((c: any) => ({ name: String(c.name), value: String(c.value) }))
-          : [];
-      } catch (err) {
-        return [] as { name: string; value: string }[];
-      }
-    },
+    getAll: () => normalized,
     // setAll is intentionally omitted. If your application needs to write auth cookies
     // server-side (token refresh), implement setAll in middleware and pass a full
     // adapter there.

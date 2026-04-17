@@ -8,7 +8,7 @@ export default async function DashboardPage() {
 
   // fetch bookings & rewards server-side
   const { getServerSupabase } = await import("@/lib/supabase-server");
-  const supabase = getServerSupabase();
+  const supabase = await getServerSupabase();
 
   const bookingsRes = await supabase
     .from("bookings")
@@ -24,7 +24,7 @@ export default async function DashboardPage() {
   const membership = profile?.membership ?? "free";
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-black text-slate-100">
+    <div className="min-h-screen bg-linear-to-b from-slate-900 via-slate-900 to-black text-slate-100">
       <Navbar />
       <main className="mx-auto max-w-6xl px-6 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -48,15 +48,15 @@ export default async function DashboardPage() {
             <section className="rounded-2xl bg-slate-800/60 p-6 border border-slate-800 shadow">
               <h2 className="text-lg font-semibold text-amber-200">Quick actions</h2>
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Link href="/courses" className="block rounded-lg bg-gradient-to-tr from-slate-900/40 to-slate-800/40 p-4 hover:scale-[1.01] transition">
+                <Link href="/courses" className="block rounded-lg bg-linear-to-tr from-slate-900/40 to-slate-800/40 p-4 hover:scale-[1.01] transition">
                   <div className="text-sm text-slate-300">Browse</div>
                   <div className="mt-2 font-semibold text-xl">Courses</div>
                 </Link>
-                <Link href="/rewards" className="block rounded-lg bg-gradient-to-tr from-slate-900/40 to-slate-800/40 p-4 hover:scale-[1.01] transition">
+                <Link href="/rewards" className="block rounded-lg bg-linear-to-tr from-slate-900/40 to-slate-800/40 p-4 hover:scale-[1.01] transition">
                   <div className="text-sm text-slate-300">View</div>
                   <div className="mt-2 font-semibold text-xl">My Rewards</div>
                 </Link>
-                <Link href="/bookings" className="block rounded-lg bg-gradient-to-tr from-slate-900/40 to-slate-800/40 p-4 hover:scale-[1.01] transition">
+                <Link href="/bookings" className="block rounded-lg bg-linear-to-tr from-slate-900/40 to-slate-800/40 p-4 hover:scale-[1.01] transition">
                   <div className="text-sm text-slate-300">Manage</div>
                   <div className="mt-2 font-semibold text-xl">My Bookings</div>
                 </Link>
@@ -84,7 +84,7 @@ export default async function DashboardPage() {
           </div>
 
           <aside className="space-y-6">
-            <div className="rounded-2xl bg-gradient-to-b from-slate-800/50 to-slate-900 p-6 border border-slate-800 shadow">
+            <div className="rounded-2xl bg-linear-to-b from-slate-800/50 to-slate-900 p-6 border border-slate-800 shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-sm text-slate-300">Rewards points</div>

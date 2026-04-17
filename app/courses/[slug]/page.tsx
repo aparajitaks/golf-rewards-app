@@ -8,7 +8,7 @@ type Params = { params: { slug: string } };
 
 export default async function CourseDetailPage({ params }: Params) {
   const { slug } = params;
-  const supabase = getServerSupabase();
+  const supabase = await getServerSupabase();
 
   const { data, error } = await supabase
     .from('golf_courses')
