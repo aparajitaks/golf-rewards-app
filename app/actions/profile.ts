@@ -7,7 +7,10 @@ import { requireUser } from "@/lib/auth";
 
 const profileSchema = z.object({
   full_name: z.string().min(1).max(120).optional(),
-  charity_id: z.string().uuid().nullable().optional(),
+  charity_id: z
+    .union([z.string().uuid(), z.literal(""), z.null()])
+    .optional()
+    .transform((v) => (v === "" || v === undefined ? null : v)),
   contribution_percent: z.coerce.number().int().min(10).max(100).optional(),
   independent_donation_opt_in: z.boolean().optional(),
 });
