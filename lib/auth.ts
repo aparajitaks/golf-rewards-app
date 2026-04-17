@@ -4,24 +4,23 @@ import { redirect } from 'next/navigation';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getServerSupabase } from './supabase-server';
 
+// Server-side helper that validates the authenticated user by calling
+// Supabase's auth.getUser() which verifies the session with the Auth server.
 export async function requireUser() {
   const supabase = (await getServerSupabase()) as SupabaseClient;
 
-  const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession();
+  const { data, error } = await supabase.auth.getUser();
 
   if (error) {
     // On unexpected supabase error, redirect to login to be safe
     return redirect('/login');
   }
 
-  if (!session || !session.user) {
-    redirect('/login');
-  }
+  const user = data?.user ?? null;
 
-  const user = session.user;
+  if (!user) {
+    return redirect('/login');
+  }
 
   // fetch profile from 'profiles' table if present
   const { data: profile } = await supabase
@@ -35,8 +34,6 @@ export async function requireUser() {
 
 export async function getCurrentUser() {
   const supabase = (await getServerSupabase()) as SupabaseClient;
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  return session?.user ?? null;
+  const { data } = await supabase.auth.getUser();
+  return data?.user ?? null;
 }

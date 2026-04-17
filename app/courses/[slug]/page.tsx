@@ -4,10 +4,12 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
-type Params = { params: { slug: string } };
+type Params = { params: { slug: string } | Promise<{ slug: string }> };
 
 export default async function CourseDetailPage({ params }: Params) {
-  const { slug } = params;
+  // Next.js may provide `params` as a Promise in some runtimes — safely await it.
+  const resolved = (await params) as { slug: string };
+  const { slug } = resolved;
   const supabase = await getServerSupabase();
 
   const { data, error } = await supabase

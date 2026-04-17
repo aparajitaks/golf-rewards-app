@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase';
 import LogoutButton from '@/components/LogoutButton';
 import { Button } from '@/components/ui/button';
+import { LogIn } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -55,7 +56,7 @@ export default function LoginPage() {
         <h1 className="text-2xl font-semibold mb-6">Sign in to Golf Rewards</h1>
 
         <Button onClick={handleGoogle} variant="outline" className="w-full mb-4 flex items-center justify-center gap-2">
-          <img src="/icons/google.svg" alt="Google" className="w-5 h-5" />
+          <LogIn className="w-5 h-5" />
           Continue with Google
         </Button>
 

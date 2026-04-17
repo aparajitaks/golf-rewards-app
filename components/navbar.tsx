@@ -23,13 +23,14 @@ export default function Navbar() {
     let mounted = true;
 
     async function init() {
-      const { data: { session } } = await supabase.auth.getSession();
-      const u = session?.user ?? null;
+      // Use getUser() client-side to ensure the user object is verified by the auth backend
+      const { data } = await supabase.auth.getUser();
+      const u = data?.user ?? null;
       if (!mounted) return;
       setUser(u);
       if (u) {
-        const { data } = await supabase.from("profiles").select("*").eq("id", u.id).maybeSingle();
-        if (mounted) setProfile(data ?? null);
+        const { data: p } = await supabase.from('profiles').select('*').eq('id', u.id).maybeSingle();
+        if (mounted) setProfile(p ?? null);
       } else {
         setProfile(null);
       }
@@ -38,12 +39,15 @@ export default function Navbar() {
     init();
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      const nextUser = session?.user ?? null;
-      setUser(nextUser);
-      if (!nextUser) setProfile(null);
-      if (nextUser) {
-        supabase.from("profiles").select("*").eq("id", nextUser.id).maybeSingle().then((r) => setProfile(r.data ?? null));
-      }
+      // Prefer to re-fetch the verified user after auth events
+      supabase.auth.getUser().then(({ data }) => {
+        const nextUser = data?.user ?? null;
+        setUser(nextUser);
+        if (!nextUser) setProfile(null);
+        if (nextUser) {
+          supabase.from('profiles').select('*').eq('id', nextUser.id).maybeSingle().then((r) => setProfile(r.data ?? null));
+        }
+      });
     });
 
     return () => {
