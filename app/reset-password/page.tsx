@@ -1,7 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getBrowserSupabase } from "@/lib/supabase";
@@ -19,11 +18,7 @@ function ResetPasswordInner() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
-
-  useEffect(() => {
-    const err = params?.get("error_description") || params?.get("error");
-    if (err) setError(err);
-  }, [params]);
+  const oauthError = useMemo(() => params?.get("error_description") ?? params?.get("error"), [params]);
 
   useEffect(() => {
     (async () => {
@@ -89,7 +84,7 @@ function ResetPasswordInner() {
                 <Label htmlFor="confirm">Confirm</Label>
                 <Input id="confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} type="password" required autoComplete="new-password" />
               </div>
-              {error && <p className="text-sm text-destructive">{error}</p>}
+              {(oauthError || error) && <p className="text-sm text-destructive">{oauthError ?? error}</p>}
               {message && <p className="text-sm text-emerald-600 dark:text-emerald-400">{message}</p>}
               <Button type="submit" disabled={loading}>
                 {loading ? "Updating…" : "Set password"}
