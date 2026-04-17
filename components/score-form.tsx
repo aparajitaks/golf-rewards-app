@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { scoreFormSchema, type ScoreFormValues } from "@/lib/schemas/score";
@@ -15,7 +15,7 @@ export function ScoreForm({ disabled }: { disabled?: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const form = useForm<ScoreFormValues>({
-    resolver: zodResolver(scoreFormSchema),
+    resolver: zodResolver(scoreFormSchema) as Resolver<ScoreFormValues>,
     defaultValues: { score_date: new Date().toISOString().slice(0, 10), points: 36 },
   });
 
