@@ -1,47 +1,78 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from "next/server";
+import { updateSession } from "@/lib/supabase/middleware";
 
-// Protect only the /dashboard route and avoid redirect loops.
-const PUBLIC_PATHS = [
-  '/login',
-  '/signup',
-  '/forgot-password',
-  '/reset-password',
-  '/auth/callback',
-  '/',
-  '/about',
-  '/pricing',
-  '/courses',
+const AUTH_PATHS = new Set([
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/reset-password",
+  "/auth/callback",
+]);
+
+const PUBLIC_PREFIXES = [
+  "/",
+  "/pricing",
+  "/charities",
+  "/concept",
+  "/checkout",
+  "/api/stripe/webhook",
 ];
 
-export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+function isPublicPath(pathname: string) {
+  if (AUTH_PATHS.has(pathname)) return true;
+  for (const p of PUBLIC_PREFIXES) {
+    if (p === "/" && pathname === "/") return true;
+    if (p !== "/" && pathname === p) return true;
+    if (p !== "/" && pathname.startsWith(`${p}/`)) return true;
+  }
+  return false;
+}
 
-  // Ignore Next.js internals and static files
-  if (pathname.startsWith('/_next') || pathname.includes('.')) return NextResponse.next();
-
-  // If user tries to access auth pages but already has an auth cookie -> redirect to dashboard
-  const hasAuthCookie = Boolean(
-    req.cookies.get(process.env.NEXT_PUBLIC_SUPABASE_COOKIE_NAME || 'sb-access-token')?.value ||
-      req.cookies.get('supabase-auth-token')?.value ||
-      req.cookies.get('sb:token')?.value,
-  );
-
-  // If a logged-in user requests login/signup/etc, send them to dashboard
-  if (hasAuthCookie && (pathname === '/login' || pathname === '/signup' || pathname === '/auth/callback')) {
-    return NextResponse.redirect(new URL('/dashboard', req.url));
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  if (pathname.startsWith("/_next") || pathname.includes(".")) {
+    return NextResponse.next();
   }
 
-  // If a non-logged-in user requests dashboard, send to login but preserve return path
-  if (!hasAuthCookie && pathname === '/dashboard') {
-    const loginUrl = new URL('/login', req.url);
-    loginUrl.searchParams.set('next', pathname);
-    return NextResponse.redirect(loginUrl);
+  const { response, supabase } = await updateSession(request);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const isDashboard = pathname.startsWith("/dashboard");
+  const isAdmin = pathname.startsWith("/admin");
+
+  if (user && AUTH_PATHS.has(pathname)) {
+    const next = request.nextUrl.searchParams.get("next") ?? "/dashboard";
+    return NextResponse.redirect(new URL(next, request.url));
   }
 
-  return NextResponse.next();
+  if ((isDashboard || isAdmin) && !user) {
+    const login = new URL("/login", request.url);
+    login.searchParams.set("next", pathname);
+    return NextResponse.redirect(login);
+  }
+
+  if (isAdmin && user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profile?.role !== "admin") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+  }
+
+  if (!user && !isPublicPath(pathname) && !AUTH_PATHS.has(pathname)) {
+    // Unknown routes default to allow (e.g. future pages). Tighten if needed.
+  }
+
+  return response;
 }
 
 export const config = {
-  matcher: ['/dashboard', '/login', '/signup', '/auth/callback'],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };
