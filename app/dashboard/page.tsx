@@ -1,124 +1,194 @@
-import React from "react";
-import Navbar from "@/components/navbar";
-import { requireUser } from "@/lib/auth";
 import Link from "next/link";
+import { requireUser } from "@/lib/auth";
+import { createServerSupabase } from "@/lib/supabase/server";
+import { isPremiumActive } from "@/lib/subscription";
+import type { SubscriptionRow } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 export default async function DashboardPage() {
   const { user, profile } = await requireUser();
+  const supabase = await createServerSupabase();
 
-  // fetch bookings & rewards server-side
-  const { getServerSupabase } = await import("@/lib/supabase-server");
-  const supabase = await getServerSupabase();
-
-  const bookingsRes = await supabase
-    .from("bookings")
-    .select("id, course_id, start_at, status, course:course_id ( id, name, slug, image_url )")
+  const { data: sub } = await supabase
+    .from("subscriptions")
+    .select("*")
     .eq("user_id", user.id)
-    .order("start_at", { ascending: true })
-    .limit(6);
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  const rewardsRes = await supabase.from("rewards").select("points_total").eq("user_id", user.id).maybeSingle();
+  const premium = isPremiumActive(sub as SubscriptionRow | null);
 
-  const upcoming = (bookingsRes.data ?? []) as any[];
-  const points = rewardsRes.data?.points_total ?? profile?.points ?? 0;
-  const membership = profile?.membership ?? "free";
+  const { data: scores } = await supabase
+    .from("scores")
+    .select("id, score_date, points")
+    .eq("user_id", user.id)
+    .order("score_date", { ascending: false });
+
+  const { data: charity } = profile?.charity_id
+    ? await supabase.from("charities").select("name").eq("id", profile.charity_id).maybeSingle()
+    : { data: null };
+
+  const { data: draws } = await supabase
+    .from("draws")
+    .select("id, title, status, period_month, closes_at")
+    .in("status", ["open", "closed", "published"])
+    .order("period_month", { ascending: false })
+    .limit(4);
+
+  const { data: entryRows } = await supabase.from("draw_entries").select("draw_id").eq("user_id", user.id).limit(20);
+  const drawIds = [...new Set((entryRows ?? []).map((r) => r.draw_id))];
+  const { data: entryDraws } =
+    drawIds.length > 0
+      ? await supabase.from("draws").select("id, title, status").in("id", drawIds)
+      : { data: [] as { id: string; title: string; status: string }[] };
+
+  const { data: notifs } = await supabase
+    .from("notifications")
+    .select("id, title, body, created_at, read_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(5);
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-slate-900 via-slate-900 to-black text-slate-100">
-      <Navbar />
-      <main className="mx-auto max-w-6xl px-6 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <section className="rounded-2xl bg-slate-800/60 p-6 border border-slate-800 shadow">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h1 className="text-2xl font-extrabold text-amber-300">Welcome back{profile?.full_name ? `, ${profile.full_name}` : ""}</h1>
-                  <p className="mt-1 text-slate-400">Your dashboard — bookings, rewards and quick actions.</p>
-                </div>
+    <div className="space-y-8">
+      <div>
+        <h1 className="font-heading text-3xl font-bold tracking-tight">
+          Welcome back{profile?.full_name ? `, ${profile.full_name}` : ""}
+        </h1>
+        <p className="mt-2 text-muted-foreground">Your membership hub — subscription, scores, draws, and impact settings.</p>
+      </div>
 
-                <div className="text-right">
-                  <div className="text-sm text-slate-300">Membership</div>
-                  <div className="mt-1 inline-flex items-center rounded-full bg-slate-900/60 px-3 py-1 text-xs font-semibold text-amber-200">
-                    {membership === "premium" ? "Premium" : "Member"}
-                  </div>
-                </div>
-              </div>
-            </section>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-2">
+            <CardTitle className="font-heading">Subscription</CardTitle>
+            <Badge variant={premium ? "success" : "secondary"}>{premium ? "Active" : "Inactive"}</Badge>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {premium && sub?.current_period_end && (
+              <p className="text-muted-foreground">
+                Renews on{" "}
+                <span className="font-medium text-foreground">
+                  {new Date(sub.current_period_end).toLocaleDateString(undefined, { dateStyle: "medium" })}
+                </span>
+                .
+              </p>
+            )}
+            {!premium && (
+              <p className="text-muted-foreground">
+                Subscribe to unlock score entry, draw participation, and premium dashboard modules.
+              </p>
+            )}
+            <Button asChild size="sm" variant="outline">
+              <Link href="/dashboard/subscription">Manage subscription</Link>
+            </Button>
+          </CardContent>
+        </Card>
 
-            <section className="rounded-2xl bg-slate-800/60 p-6 border border-slate-800 shadow">
-              <h2 className="text-lg font-semibold text-amber-200">Quick actions</h2>
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Link href="/courses" className="block rounded-lg bg-linear-to-tr from-slate-900/40 to-slate-800/40 p-4 hover:scale-[1.01] transition">
-                  <div className="text-sm text-slate-300">Browse</div>
-                  <div className="mt-2 font-semibold text-xl">Courses</div>
-                </Link>
-                <Link href="/rewards" className="block rounded-lg bg-linear-to-tr from-slate-900/40 to-slate-800/40 p-4 hover:scale-[1.01] transition">
-                  <div className="text-sm text-slate-300">View</div>
-                  <div className="mt-2 font-semibold text-xl">My Rewards</div>
-                </Link>
-                <Link href="/bookings" className="block rounded-lg bg-linear-to-tr from-slate-900/40 to-slate-800/40 p-4 hover:scale-[1.01] transition">
-                  <div className="text-sm text-slate-300">Manage</div>
-                  <div className="mt-2 font-semibold text-xl">My Bookings</div>
-                </Link>
-              </div>
-            </section>
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-heading text-lg">Charity</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm">
+            <p className="font-medium">{charity?.name ?? "Not selected"}</p>
+            <p className="mt-2 text-muted-foreground">Contribution: {profile?.contribution_percent ?? 10}%</p>
+            <Button asChild className="mt-4" size="sm" variant="outline">
+              <Link href="/dashboard/charity">Adjust settings</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
 
-            <section className="rounded-2xl bg-slate-800/60 p-6 border border-slate-800 shadow">
-              <h2 className="text-lg font-semibold text-amber-200">Upcoming bookings</h2>
-              <div className="mt-4 space-y-3">
-                {upcoming.length === 0 ? (
-                  <div className="text-slate-400">No upcoming bookings. Browse courses to book your next round.</div>
-                ) : (
-                  upcoming.map((b) => (
-                    <div key={b.id} className="flex items-center justify-between gap-4 rounded-md bg-slate-900/30 p-3">
-                      <div>
-                        <div className="font-semibold">{b.course?.name ?? "Course"}</div>
-                        <div className="text-sm text-slate-400">{new Date(b.start_at).toLocaleString()}</div>
-                      </div>
-                      <div className="text-sm text-slate-300">{b.status}</div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </section>
-          </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="font-heading text-lg">Stableford scores</CardTitle>
+            <span className="text-xs text-muted-foreground">{(scores ?? []).length} / 5</span>
+          </CardHeader>
+          <CardContent>
+            {!premium ? (
+              <p className="text-sm text-muted-foreground">Activate membership to add or edit scores.</p>
+            ) : (scores ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">No scores yet — add your latest five rounds.</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {(scores ?? []).map((s) => (
+                  <li key={s.id} className="flex justify-between rounded-lg border border-border/60 px-3 py-2">
+                    <span className="text-muted-foreground">{s.score_date}</span>
+                    <span className="font-semibold">{s.points} pts</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Button asChild className="mt-4" size="sm" variant="outline">
+              <Link href="/dashboard/scores">Open score manager</Link>
+            </Button>
+          </CardContent>
+        </Card>
 
-          <aside className="space-y-6">
-            <div className="rounded-2xl bg-linear-to-b from-slate-800/50 to-slate-900 p-6 border border-slate-800 shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm text-slate-300">Rewards points</div>
-                  <div className="mt-2 text-3xl font-extrabold text-amber-300">{points}</div>
-                </div>
-                <div>
-                  <Link href="/rewards" className="rounded-md bg-emerald-600 px-3 py-1 text-sm font-semibold">
-                    Redeem
-                  </Link>
-                </div>
-              </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-heading text-lg">Upcoming draws</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2 text-sm">
+              {(draws ?? []).map((d) => (
+                <li key={d.id} className="flex flex-col rounded-lg border border-border/60 px-3 py-2">
+                  <span className="font-medium">{d.title}</span>
+                  <span className="text-xs text-muted-foreground capitalize">{d.status}</span>
+                </li>
+              ))}
+            </ul>
+            <Button asChild className="mt-4" size="sm" variant="outline">
+              <Link href="/dashboard/draws">Draws & entries</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-heading text-lg">Past draw entries</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(entryDraws ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">You have not entered a draw yet.</p>
+          ) : (
+            <ul className="space-y-2 text-sm">
+              {(entryDraws ?? []).map((d) => (
+                <li key={d.id} className="flex justify-between gap-2 rounded-lg border border-border/60 px-3 py-2">
+                  <span>{d.title}</span>
+                  <span className="text-xs capitalize text-muted-foreground">{d.status}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-heading text-lg">Notifications</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {(notifs ?? []).length === 0 && <p className="text-sm text-muted-foreground">You are all caught up.</p>}
+          {(notifs ?? []).map((n) => (
+            <div key={n.id} className="rounded-lg border border-border/60 px-3 py-2">
+              <div className="text-sm font-medium">{n.title}</div>
+              {n.body && <p className="text-xs text-muted-foreground">{n.body}</p>}
             </div>
+          ))}
+        </CardContent>
+      </Card>
 
-            <div className="rounded-2xl bg-slate-800/60 p-6 border border-slate-800 shadow">
-              <h3 className="text-sm text-slate-300">Account</h3>
-              <div className="mt-3 space-y-2">
-                <div className="text-sm text-slate-400">Email</div>
-                <div className="font-mono text-sm">{user.email}</div>
-                <div className="text-sm text-slate-400 mt-3">Member since</div>
-                <div className="text-sm">{new Date(user.created_at).toLocaleDateString()}</div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-slate-800/60 p-6 border border-slate-800 shadow">
-              <h3 className="text-sm text-slate-300">Support</h3>
-              <div className="mt-3">
-                <a href="mailto:support@golfrewards.example" className="text-sm text-emerald-300 hover:underline">
-                  Contact support
-                </a>
-              </div>
-            </div>
-          </aside>
-        </div>
-      </main>
+      <Separator />
+      <p className="text-xs text-muted-foreground">
+        Signed in as <span className="font-mono text-foreground">{user.email}</span>
+      </p>
     </div>
   );
 }

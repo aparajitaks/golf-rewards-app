@@ -1,8 +1,9 @@
 // lib/auth.ts
 // Server-side auth helpers for Next.js App Router
-import { redirect } from 'next/navigation';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { getServerSupabase } from './supabase-server';
+import { redirect } from "next/navigation";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Profile } from "@/lib/types";
+import { getServerSupabase } from "./supabase-server";
 
 // Server-side helper that validates the authenticated user by calling
 // Supabase's auth.getUser() which verifies the session with the Auth server.
@@ -29,7 +30,7 @@ export async function requireUser() {
     .eq('id', user.id)
     .maybeSingle();
 
-  return { user, profile };
+  return { user, profile: profile as Profile | null };
 }
 
 export async function getCurrentUser() {
